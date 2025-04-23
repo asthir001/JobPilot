@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Work+Sans%3Awght%40400%3B500%3B700%3B900"
+    />
+
+    <title>JobPilot</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  </head>
+  <body>
+
+<div class="px-40 flex flex-1 justify-center py-5">
+  <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+    <h2 class="text-[#111518] tracking-light text-[28px] font-bold leading-tight px-4 text-left pb-3 pt-5">Application Analysis</h2>
+    <div class="px-4 py-3 @container">
+      <div class="flex overflow-hidden rounded-xl border border-[#dbe1e6] bg-white">
+        <table class="flex-1">
+          <thead>
+            <tr class="bg-white">
+              <th class="px-4 py-3 text-left text-[#111518] w-[400px] text-sm font-medium leading-normal">Job Title</th>
+              <th class="px-4 py-3 text-left text-[#111518] w-[400px] text-sm font-medium leading-normal">Company Name</th>
+              <th class="px-4 py-3 text-left text-[#111518] w-[400px] text-sm font-medium leading-normal">Location</th>
+              <th class="px-4 py-3 text-left text-[#111518] w-[400px] text-sm font-medium leading-normal">Relevance Score</th>
+              <th class="px-4 py-3 text-left text-[#111518] w-[400px] text-sm font-medium leading-normal">Reason for Score</th>
+              <th class="px-4 py-3 text-left text-[#111518] w-[400px] text-sm font-medium leading-normal">Recommended Keywords</th>
+              <th class="px-4 py-3 text-left text-[#111518] w-[400px] text-sm font-medium leading-normal">Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if ranked_jobs %}
+              {% for job in ranked_jobs %}
+                <tr class="border-t border-t-[#dbe1e6]">
+                  <td class="px-4 py-2 text-[#111518] text-sm font-normal leading-normal">{{ job.job_title }}</td>
+                  <td class="px-4 py-2 text-[#60778a] text-sm font-normal leading-normal">{{ job.company_name }}</td>
+                  <td class="px-4 py-2 text-[#111518] text-sm font-normal leading-normal">{{ job.location }}</td>
+                  <td class="px-4 py-2 text-[#60778a] text-sm font-normal leading-normal">{{ job.relevance_score }}</td>
+                  <td class="px-4 py-2 text-[#111518] text-sm font-normal leading-normal">{{ job.reason }}</td>
+                  <td class="px-4 py-2 text-[#60778a] text-sm font-normal leading-normal">{{ job.recommended_keywords | join(', ') }}</td>
+                  <td class="px-4 py-2 text-[#60778a] text-sm font-normal leading-normal">
+                    <a href="{{ job.source }}" target="_blank">{{ job.source }}</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr class="border-t border-t-[#dbe1e6]">
+                <td colspan="7" class="px-4 py-2 text-center text-[#60778a]">No jobs to display.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+  @container(max-width:120px){.table-577609ef-88ba-4369-a166-2be225d42d69-column-120{display: none;}}
+  @container(max-width:240px){.table-577609ef-88ba-4369-a166-2be225d42d69-column-240{display: none;}}
+</style>
+
+          
+  </body>

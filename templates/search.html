@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Work+Sans%3Awght%40400%3B500%3B700%3B900"
+    />
+
+    <title>JobPilot</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  </head>
+  <body>
+    <div class="relative flex size-full min-h-screen flex-col bg-white group/design-root overflow-x-hidden" style='font-family: "Work Sans", "Noto Sans", sans-serif;'>
+      <div class="layout-container flex h-full grow flex-col">
+        <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f2f5] px-10 py-3">
+          <div class="flex items-center gap-4 text-[#111518]">
+            <div class="size-4">
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z" fill="currentColor"></path></svg>
+            </div>
+            <h2 class="text-[#111518] text-lg font-bold leading-tight tracking-[-0.015em]">JobPilot</h2>
+          </div>
+        </header>
+        <div class="px-40 flex flex-1 justify-center py-5">
+          <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+            <h2 class="text-[#111518] tracking-light text-[28px] font-bold leading-tight px-4 text-left pb-3 pt-5">Resume Analysis and Job Search</h2>
+            <form id="uploadForm" enctype="multipart/form-data" action="/upload" method="POST">
+            <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+              <label class="flex flex-col min-w-40 flex-1">
+                <p class="text-[#111518] text-base font-medium leading-normal pb-2">Upload your resume (PDF)</p> 
+                  <input type="file" name="file" id="file"
+                    placeholder="Drag and drop or click to upload"
+                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#111518] focus:outline-0 focus:ring-0 border-none bg-[#f0f2f5] focus:border-none h-14 placeholder:text-[#60778a] p-4 text-base font-normal leading-normal"
+                    accept=".pdf"
+                  />
+              </label>
+            </div>
+            <div class="flex px-4 py-3 justify-start">
+              <button type="submit"
+                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center 
+                justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#2094f3] 
+                text-white text-sm font-bold leading-normal tracking-[0.015em]"
+              >
+                <span class="truncate">Search Jobs</span>
+              </button>
+            </div>
+          </form>
+
+<h3 class="text-[#111518] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Job Titles</h3>
+<p class="text-[#111518] text-base font-normal leading-normal pb-3 pt-1 px-4">Based on your resume, here are some job titles you might be interested in:</p>
+<div class="flex gap-3 p-3 flex-wrap pr-4 ">
+{% set job_titles = session.get('job_titles', []) %}
+  {% if job_titles %}
+    {% for job_title in job_titles %}
+      <div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-[#f0f2f5] pl-4 pr-4">
+        <p class="text-[#111518] text-sm font-medium leading-normal">{{ job_title }}</p>
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>
+
+
+<h3 class="text-[#111518] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Google Search </h3>
+<p class="text-[#111518] text-base font-normal leading-normal pb-3 pt-1 px-4">
+  Select the number of tailored links you need for each job titles and click below for Google Search.
+</p>
+<form action="search" method="POST">
+<div class="flex flex-wrap gap-3 p-4">
+  <label
+    class="text-sm font-medium leading-normal flex items-center justify-center rounded-xl border border-[#dbe1e6] px-4 h-11 text-[#111518] has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-[#2094f3] relative cursor-pointer"
+  >
+    1
+    <input type="radio" class="invisible absolute" name="num" value="1" />
+  </label>
+  <label
+    class="text-sm font-medium leading-normal flex items-center justify-center rounded-xl border border-[#dbe1e6] px-4 h-11 text-[#111518] has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-[#2094f3] relative cursor-pointer"
+  >
+    2
+    <input type="radio" class="invisible absolute" name="num" value="2" />
+  </label>
+  <label
+    class="text-sm font-medium leading-normal flex items-center justify-center rounded-xl border border-[#dbe1e6] px-4 h-11 text-[#111518] has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-[#2094f3] relative cursor-pointer"
+  >
+    3
+    <input type="radio" class="invisible absolute" name="num" value="3" />
+  </label>
+  <label
+    class="text-sm font-medium leading-normal flex items-center justify-center rounded-xl border border-[#dbe1e6] px-4 h-11 text-[#111518] has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-[#2094f3] relative cursor-pointer"
+  >
+    4
+    <input type="radio" class="invisible absolute" name="num" value="4"  />
+  </label>
+  <label
+    class="text-sm font-medium leading-normal flex items-center justify-center rounded-xl border border-[#dbe1e6] px-4 h-11 text-[#111518] has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-[#2094f3] relative cursor-pointer"
+  >
+    5
+    <input type="radio" class="invisible absolute" name="num" value="5" />
+  </label>
+  <label
+    class="text-sm font-medium leading-normal flex items-center justify-center rounded-xl border border-[#dbe1e6] px-4 h-11 text-[#111518] has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-[#2094f3] relative cursor-pointer"
+  >
+    6
+    <input type="radio" class="invisible absolute" name="num" value="6"  />
+  </label>
+  <label
+    class="text-sm font-medium leading-normal flex items-center justify-center rounded-xl border border-[#dbe1e6] px-4 h-11 text-[#111518] has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-[#2094f3] relative cursor-pointer"
+  >
+    7
+    <input type="radio" class="invisible absolute" name="num" value="7"  />
+  </label>
+  <label
+    class="text-sm font-medium leading-normal flex items-center justify-center rounded-xl border border-[#dbe1e6] px-4 h-11 text-[#111518] has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-[#2094f3] relative cursor-pointer"
+  >
+    8
+    <input type="radio" class="invisible absolute" name="num" value="8"  />
+  </label>
+  <label
+    class="text-sm font-medium leading-normal flex items-center justify-center rounded-xl border border-[#dbe1e6] px-4 h-11 text-[#111518] has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-[#2094f3] relative cursor-pointer"
+  >
+    9
+    <input type="radio" class="invisible absolute" name="num" value="9"  />
+  </label>
+  <label
+    class="text-sm font-medium leading-normal flex items-center justify-center rounded-xl border border-[#dbe1e6] px-4 h-11 text-[#111518] has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-[#2094f3] relative cursor-pointer"
+  >
+    10
+    <input type="radio" class="invisible absolute"name="num" value="10" />
+  </label>
+</div>
+<div class="flex px-4 py-3 justify-start">
+  <button
+    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center 
+    overflow-hidden rounded-xl h-10 px-4 bg-[#2094f3] text-white text-sm font-bold leading-normal tracking-[0.015em]"
+  >
+    <span class="truncate">Search Google</span>
+  </button>
+  </div>
+</form>
+{% if search_results %}
+<div class="flex items-center gap-4 bg-white px-4 min-h-[72px] py-2">
+    <div
+      class="text-[#111518] flex items-center justify-center rounded-lg bg-[#f0f2f5] shrink-0 size-12"
+      data-icon="MagnifyingGlass"
+      data-size="24px"
+      data-weight="regular"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+        <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
+      </svg>
+    </div>
+    <h3 class="text-[#111518] text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">Job Search Results</h3>
+        </div>    
+            <div class="px-4 py-3 @container">
+              <div class="flex overflow-hidden rounded-xl border border-[#dbe1e6] bg-white">
+                <table class="flex-1">
+                  <thead>
+                    <tr class="bg-white">
+                      <th class="table-577609ef-88ba-4369-a166-2be225d42d69-column-120 px-4 py-3 text-left text-[#111518] w-[400px] text-sm font-medium leading-normal">
+                        Job Title
+                      </th>
+                      <th class="table-577609ef-88ba-4369-a166-2be225d42d69-column-240 px-4 py-3 text-left text-[#111518] w-[400px] text-sm font-medium leading-normal">
+                        Job Links
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                {% for result in search_results %}
+                    <tr class="border-t border-t-[#dbe1e6]">
+                      <td class="table-577609ef-88ba-4369-a166-2be225d42d69-column-120 h-[72px] px-4 py-2 w-[400px] text-[#111518] text-sm font-normal leading-normal">
+                        {{ result.title }}
+                      </td>
+                      <td class="table-577609ef-88ba-4369-a166-2be225d42d69-column-240 h-[72px] px-4 py-2 w-[400px] text-[#60778a] text-sm font-normal leading-normal">
+                        <a href="{{ result.link }}" target="_blank">{{ result.link }}</a>
+                      </td>
+                    </tr>
+                    
+                 {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              <style>
+                          @container(max-width:120px){.table-577609ef-88ba-4369-a166-2be225d42d69-column-120{display: none;}}
+                @container(max-width:240px){.table-577609ef-88ba-4369-a166-2be225d42d69-column-240{display: none;}}
+              </style>
+            </div>
+
+
+{% endif %}
+<div class="flex items-center gap-4 bg-white px-4 min-h-[72px] py-2">
+<h3 class="text-[#111518] text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">
+    Lets Scrape the above Links...</h3> 
+    <!-- <form action="console" method="post"> -->
+    <button onclick="startScraping()"
+    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center 
+    overflow-hidden rounded-xl h-10 px-4 bg-[#2094f3] text-white text-sm font-bold leading-normal tracking-[0.015em]"
+  >
+    <span class="truncate">Proceed</span>
+    </button>
+<!-- </form> -->
+    </div>
+
+    <script>
+        const socket = io();
+  
+        // Listen for log messages from the server
+        socket.on('Logs', function(data) {
+          const consoleOutput = document.getElementById('consoleOutput');
+          consoleOutput.value += data.message + '\n'; // Append new log message
+          consoleOutput.scrollTop = consoleOutput.scrollHeight; // Auto-scroll to the bottom
+        });
+  
+        // Emit an event to start scraping
+        function startScraping() {
+          socket.emit('start_scraping');
+        }
+      </script>
+      
+      <!-- <script>
+        let scrapingDone = false;
+      
+        socket.on('Logs', function(data) {
+          const msg = data.message;
+      
+          if (msg.includes("✅ Jobs extracted:")) {
+            scrapingDone = true;
+            document.getElementById("resultsButton").disabled = false;
+          }
+        });
+      
+        function triggerResults() {
+          if (!scrapingDone) {
+            alert("Please wait until scraping finishes.");
+            return;
+          }
+      
+          fetch('/results', {
+            method: 'POST'
+          })
+          .then(response => response.text())
+          .then(html => {
+            document.open();
+            document.write(html);
+            document.close();
+          });
+        }
+      </script> -->
+
+<h3 class="text-[#111518] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Console Output</h3>
+<div class="flex flex-wrap items-end gap-4 px-4 py-3">
+  <label class="flex flex-col flex-1">
+    <textarea
+      id="consoleOutput"
+      placeholder="Resume processing output will appear here..."
+      class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#111518] focus:outline-0 focus:ring-0 border border-[#dbe1e6] bg-white focus:border-[#dbe1e6] min-h-36 placeholder:text-[#60778a] p-[15px] text-base font-normal leading-normal"
+      readonly
+      rows="15" cols="100" style=" overflow-y: auto; resize: none;"    
+    ></textarea>
+  </label>
+</div>
+  <div class="flex items-center gap-4 bg-white px-4 min-h-[72px] py-2">
+    <h3 class="text-[#111518] text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">
+        Lets See magic of AI...</h3> 
+        <form action="/results" method="post">
+          <button
+            class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center 
+            overflow-hidden rounded-xl h-10 px-4 bg-[#2094f3] text-white text-sm font-bold leading-normal tracking-[0.015em]"
+           
+            type="submit"
+          >
+            Let’s See the Magic of AI
+          </button>
+        </form>
+        </div>
+
+<!-- 
+        id = "resultsButton"
+        onclick="triggerResults()"
+        disabled class="bg-blue-500 text-white px-6 py-2 rounded" -->
