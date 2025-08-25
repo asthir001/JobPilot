@@ -192,22 +192,6 @@
 
 {% endif %}
 
-<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-<script>
-  const socket = io();
-
-  // Listen for log messages from the server
-  socket.on('Logs', function(data) {
-    const consoleOutput = document.getElementById('consoleOutput');
-    consoleOutput.value += data.message + '\n'; // Append new log message
-    consoleOutput.scrollTop = consoleOutput.scrollHeight; // Auto-scroll to the bottom
-  });
-
-  // Emit an event to start scraping
-  function startScraping() {
-    socket.emit('start_scraping');
-  }
-</script>
 
 <h3 class="text-[#111518] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Console Output</h3>
 <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">

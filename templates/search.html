@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -202,7 +203,6 @@
     </button>
 <!-- </form> -->
     </div>
-
     <script>
         const socket = io();
   
@@ -218,37 +218,6 @@
           socket.emit('start_scraping');
         }
       </script>
-      
-      <!-- <script>
-        let scrapingDone = false;
-      
-        socket.on('Logs', function(data) {
-          const msg = data.message;
-      
-          if (msg.includes("✅ Jobs extracted:")) {
-            scrapingDone = true;
-            document.getElementById("resultsButton").disabled = false;
-          }
-        });
-      
-        function triggerResults() {
-          if (!scrapingDone) {
-            alert("Please wait until scraping finishes.");
-            return;
-          }
-      
-          fetch('/results', {
-            method: 'POST'
-          })
-          .then(response => response.text())
-          .then(html => {
-            document.open();
-            document.write(html);
-            document.close();
-          });
-        }
-      </script> -->
-
 <h3 class="text-[#111518] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Console Output</h3>
 <div class="flex flex-wrap items-end gap-4 px-4 py-3">
   <label class="flex flex-col flex-1">
@@ -264,19 +233,12 @@
   <div class="flex items-center gap-4 bg-white px-4 min-h-[72px] py-2">
     <h3 class="text-[#111518] text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">
         Lets See magic of AI...</h3> 
-        <form action="/results" method="post">
-          <button
-            class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center 
-            overflow-hidden rounded-xl h-10 px-4 bg-[#2094f3] text-white text-sm font-bold leading-normal tracking-[0.015em]"
-           
-            type="submit"
-          >
-            Let’s See the Magic of AI
-          </button>
+        <form action="results" method="post">
+        <button type="submit"
+        class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center 
+        overflow-hidden rounded-xl h-10 px-4 bg-[#2094f3] text-white text-sm font-bold leading-normal tracking-[0.015em]"
+      >
+        <span class="truncate">Proceed</span>
+        </button>
         </form>
         </div>
-
-<!-- 
-        id = "resultsButton"
-        onclick="triggerResults()"
-        disabled class="bg-blue-500 text-white px-6 py-2 rounded" -->
