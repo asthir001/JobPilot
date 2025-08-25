@@ -3,7 +3,7 @@ import json
 import time
 import requests 
 from openai import OpenAI
-from serpapi import GoogleSearch
+from serpapi.google_search import GoogleSearch
 import PyPDF2
 import re
 from firecrawl import FirecrawlApp
@@ -11,7 +11,6 @@ from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.utils import secure_filename
 from flask_socketio import SocketIO, emit
-import logging
 import sys
 import io
 
@@ -22,39 +21,24 @@ class Colors:
     RED = '\033[91m'
     RESET = '\033[0m'
 
-
-OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
-FIRECRAWL_API_KEY=os.getenv("FIRECRAWL_API_KEY")
-SERP_API_KEY=os.getenv("SERP_API_KEY")
-
-
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './uploads'
-socketio = SocketIO(app, manage_session=True)
+socketio = SocketIO(app)
 app.secret_key = 'your_secret_key'
 
-global_scraped_results = []
 
+OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
+FIRECRAWL_API_KEY= os.getenv("FIRECRAWL_API_KEY")
+SERP_API_KEY= os.getenv("SERP_API_KEY")
 
+    
 # Initialize clients
 client = OpenAI(
-    api_key=OPENAI_API_KEY,
-    base_url="https://openrouter.ai/api/v1" # read from environment
+  base_url="https://openrouter.ai/api/v1",
+  api_key=OPENAI_API_KEY,
 )
-
 firecrawl_api_key = FIRECRAWL_API_KEY
-serp_api_key      = SERP_API_KEY
-
-
-
-class SocketIOLogHandler(logging.Handler):
-    def emit(self, record):
-        """Send log message to the client via SocketIO 'Logs' event."""
-        log_msg = self.format(record)
-        socketio.emit('Logs', {'message': log_msg})
-
-if not os.path.exists(app.config['UPLOAD_FOLDER']):
-    os.makedirs(app.config['UPLOAD_FOLDER'])
+serp_api_key = SERP_API_KEY
 
 def read_resume(file_path):
     """Read the resume from the given PDF file path."""
@@ -69,23 +53,6 @@ def read_resume(file_path):
         print(f"Error reading resume: {str(e)}")
         return None
     
-
-
-def pretty_console_block(jobs: list[dict]) -> str:
-    """Return a clean multiline string for the textarea console."""
-    lines = []
-    for i, j in enumerate(jobs, 1):
-        lines.append(f"\n—— Job {i} ———————————————————")
-        lines.append(f"Title   : {j.get('job_title', 'N/A')}")
-        lines.append(f"Company : {j.get('company_name', 'N/A')}")
-        lines.append(f"Location: {j.get('location', 'N/A')}")
-        lines.append(f"Score   : {j.get('relevance_score', '—')}")
-        kw = ', '.join(j.get('recommended_keywords', []))
-        lines.append(f"Keywords: {kw if kw else '—'}")
-        lines.append(f"Source  : {j.get('source', 'N/A')}")
-    return '\n'.join(lines)
-
-
 # Function to extract job titles from resume text using LLM and clean them
 def extract_job_titles(resume_text):
     prompt = """
@@ -97,13 +64,13 @@ def extract_job_titles(resume_text):
 
     try:
         response = client.chat.completions.create(
-            model="deepseek/deepseek-r1:free",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant specialized in analyzing resumes."},
-                {"role": "user", "content": f"{prompt}:\n\n{resume_text}"},
-            ],
-            stream=False,
-        )
+        model="deepseek/deepseek-r1:free",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant specialized in analyzing resumes."},
+            {"role": "user", "content": f"{prompt}:\n\n{resume_text}"},
+        ],
+        stream=False,
+    )
 
         raw_output = response.choices[0].message.content.strip()
         print(f"{Colors.YELLOW}Raw LLM Output: {raw_output}{Colors.RESET}")
@@ -155,35 +122,6 @@ def clean_json_string(text):
     # Optionally remove leading text before actual JSON
     match = re.search(r"{.*}", text, re.DOTALL)
     return match.group(0) if match else text
-
-def robust_json_array_from_llm(text):
-    """
-    Handles multiple LLM output formats: 
-    - single JSON array 
-    - multiple JSON objects stacked
-    - markdown code blocks
-    """
-    text = text.strip()
-    text = re.sub(r"^```(?:json)?|```$", "", text, flags=re.MULTILINE).strip()
-
-    # Attempt 1: try parsing as a clean array
-    try:
-        result = json.loads(text)
-        if isinstance(result, list):
-            return result
-    except json.JSONDecodeError:
-        pass
-
-    # Attempt 2: try stacking individual JSON objects
-    matches = re.findall(r"\{.*?\}", text, re.DOTALL)
-    try:
-        parsed_objects = [json.loads(obj) for obj in matches]
-        return parsed_objects
-    except Exception as e:
-        print(f"{Colors.RED}❌ Failed to parse stacked objects: {e}{Colors.RESET}")
-        print(f"{Colors.YELLOW}⚠️ Raw Text Received:\n{text}{Colors.RESET}")
-        return []
-
 
 def extract_job_details_with_llm(page_text, link):
     prompt = f"""
@@ -272,6 +210,9 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     
+    print(f"Loaded API Key: {os.getenv('OPENAI_API_KEY')}")
+    print(f"Loaded Firecrawl API Key: {os.getenv('FIRECRAWL_API_KEY')}")
+    print(f"Loaded SerpAPI Key: {os.getenv('SERP_API_KEY')}")
     # Check if the post request has the file part
     if 'file' not in request.files:
         return redirect(request.url)
@@ -280,13 +221,20 @@ def upload_file():
     if file:
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path) #stores the file in local server.
-        
-        resume_text = read_resume(file_path) # simply read the PDF file using PyPDF2.
-        session['resume_text'] = resume_text  
-        job_titles = extract_job_titles(resume_text)
-        session['job_titles'] = job_titles  # Store job titles in session
+        file.save(file_path)
 
+        # Read the resume and process it
+        resume_text = read_resume(file_path)
+        session['resume_text'] = resume_text  # Store resume text in session
+        job_titles = extract_job_titles(resume_text)
+        # job_titles = ["Business Analyst", "Project Manager", "Data Analyst"]
+        session['job_titles'] = job_titles  # Store job titles in session
+        # search_results = search_jobs_on_google(job_titles)
+        # filtered_results = [r for r in search_results if is_valid_job_site(r["link"])]
+        
+        # links = [result["link"] for result in filtered_results]
+        # job_details = scrape_job_details(links)
+        # ranked_jobs = rank_jobs(job_details, resume_text)
 
         return render_template('upload.html', job_titles=job_titles)
 
@@ -297,9 +245,7 @@ def search_jobs_on_google():
         job_titles = session.get('job_titles', [])
         search_results = []
 
-        # here i am using the google docking, so that my search will be efficient and also i m limiting my search space 
-        # so that i can fasten the entire process as we are in a time constraint, 
-        # also one can use this tool without google docking and unlimiting the number of websites
+        # Limit results to real job platforms only
         allowed_sites = [
             "site:careers.google.com", 
             "site:jobs.apple.com", 
@@ -310,15 +256,13 @@ def search_jobs_on_google():
         ]
 
         for title in job_titles:
-            #Google search query API - Serpapi.   
             query = f'({" OR ".join(allowed_sites)}) "{title}"'
-            #Api parameters.
             search_params = {
                 "q": query,
                 "engine": "google",
                 "google_domain": "google.com",
                 "api_key": serp_api_key,
-                "num": request.form.get('num', default=3, type=int) # Number of results to fetch that user can select from the form.
+                "num": request.form.get('num', default=3, type=int)
             }
 
             response = requests.get("https://serpapi.com/search", params=search_params)
@@ -334,43 +278,17 @@ def search_jobs_on_google():
                     "snippet": result.get("snippet")
                 })
         
-
         filtered_results = [r for r in search_results if is_valid_job_site(r["link"])]
-
         if not filtered_results:
             print(f"{Colors.RED}❌ No valid job listings found on supported sites.{Colors.RESET}")
-            # store empty list in session so user doesn't see "None"
-            session['filtered_results'] = []
-            # Render the template anyway, maybe show an error message
-            return render_template('search.html', 
-                                search_results=[], 
-                                error_msg="No valid job listings found.")
-
+            return
         session['filtered_results'] = filtered_results
         return render_template('search.html', search_results=filtered_results)
-
 
     except Exception as e:
         print(f"{Colors.RED}❌ Error searching jobs on Google: {str(e)}{Colors.RESET}")
         return []
     
-
-def pretty_scrape_block(jobs):
-    lines = []
-    for i, j in enumerate(jobs, 1):
-        lines.append(f"\n—— Job {i} ———————————————————")
-        lines.append(f"Title       : {j['job_title']}")
-        lines.append(f"Company     : {j['company_name']}")
-        lines.append(f"Location    : {j['location']}")
-        lines.append(f"Experience  : {j['experience_level']}")
-        # show the REQUIRED skills, not recommended
-        skills = ', '.join(j.get('required_skills', []))
-        lines.append(f"Req. Skills : {skills or '—'}")
-        lines.append(f"Source      : {j['source']}")
-    return '\n'.join(lines)
-
-
-
 @socketio.on('start_scraping')
 def scrape_job_details():
     """Scrapes job details using Firecrawl one-by-one, and uses local HTML+LLM fallback if needed."""
@@ -378,7 +296,7 @@ def scrape_job_details():
     fallback_used = 0
     empty_extractions = 0
     failed_count = 0
-    
+
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {firecrawl_api_key}'
@@ -399,17 +317,11 @@ def scrape_job_details():
         return []
     emit('Logs', {'message': f'Scraping {len(links)} job links one-by-one with fallback logic...'})
         
-
-    for idx, item in enumerate(links, 1):
-    # item is a dictionary like {"link": "https://...", "title": "...", "snippet": "..."}
-        actual_url = item["link"]
-
-        print(f"{Colors.CYAN}⏳ Scraping [{idx}/{len(links)}]: {actual_url}{Colors.RESET}")
-        emit('Logs', {'message': f'⏳ Scraping [{idx}/{len(links)}]: {actual_url}'})
-        
-        # Executing the firecrawl API to extract the data from each links
+    for idx, link in enumerate(links, 1):
+        print(f"{Colors.CYAN}⏳ Scraping [{idx}/{len(links)}]: {link}{Colors.RESET}")
+        emit('Logs', {'message': f'⏳ Scraping [{idx}/{len(links)}]: {link}'})
         payload = {
-            "urls": [actual_url],
+            "urls": [link],
             "prompt": job_prompt,
             "enableWebSearch": False
         }
@@ -426,33 +338,32 @@ def scrape_job_details():
             job_data = data.get("data", [])
             if data.get("success") and job_data:
                 all_results.extend(job_data)
-                emit('Logs', {'message': f'✅ Extracted with prompt [{idx}]'})
+                emit('Logs', {'message': f'✅ Extracted with prompt [{idx}]'})                                  
             else:
                 fallback_used += 1
                 emit('Logs', {'message': f'⚠️ No structured job data. Using local HTML + LLM fallback [{idx}]...'})
-
                 # Fallback to local HTML + LLM extraction
-                raw_text = fetch_visible_text_from_page(actual_url)
+                raw_text = fetch_visible_text_from_page(link)
                 if raw_text:
-                    llm_result = extract_job_details_with_llm(raw_text, actual_url)
+                    llm_result = extract_job_details_with_llm(raw_text, link)
                     if llm_result:
                         all_results.append(llm_result)
-                        emit('Logs', {'message': f'[{llm_result}]'})
                         emit('Logs', {'message': f'🧠 LLM successfully extracted job info from local fallback HTML.'})
                     else:
                         empty_extractions += 1
-                        emit('Logs', {'message': f'⚠️ LLM could not parse fallback page [{idx}]'})
+                        emit('Logs', {'message': f'⚠️ LLM could not parse fallback page [{idx}]'})        
                 else:
                     empty_extractions += 1
                     emit('Logs', {'message': f'⚠️ No content from local HTML scrape [{idx}]'})
+        
 
         except Exception as e:
             failed_count += 1
-            print(f"{Colors.RED}❌ Error scraping [{idx}]: {actual_url}\nReason: {str(e)}{Colors.RESET}")
-            emit('Logs', {'message': f'❌ Error scraping [{idx}]: {actual_url}\nReason: {str(e)}'})
+            print(f"{Colors.RED}❌ Error scraping [{idx}]: {link}\nReason: {str(e)}{Colors.RESET}")
+            emit('Logs', {'message': f'❌ Error scraping [{idx}]: {link}\nReason: {str(e)}'})
 
-        # Respect Firecrawl rate limit
-        time.sleep(6)
+
+        time.sleep(6)  # Respect Firecrawl rate limit
 
     print(f"\n{Colors.GREEN}✅ Jobs extracted: {len(all_results)}{Colors.RESET}")
     emit('Logs', {'message': f'✅ Jobs extracted: {len(all_results)}'}) 
@@ -463,32 +374,16 @@ def scrape_job_details():
     print(f"{Colors.RED}❌ Failed requests: {failed_count}{Colors.RESET}")
     emit('Logs', {'message': f'❌ Failed requests: {failed_count}'})      
     
-    
     session['all_results'] = all_results
-    global global_scraped_results
-    global_scraped_results = all_results
-
-
-    formatted = pretty_scrape_block(all_results)
-    print(formatted)
-    emit('Logs', {'message': formatted})
-
+    print("Session all_results:", session.get('all_results'))
+    return all_results
 
 @app.route('/results', methods=['POST'])
 def rank_jobs():
-    logging.info(f"🔎 Request method: {request.method}")
+    """Rank jobs based on resume relevance and suggest ATS-friendly keywords."""
     
     resume_text = session.get('resume_text', [])
-    global global_scraped_results
-    jobs = global_scraped_results
-    
-    logging.info(f"📦 resume_text length: {len(resume_text)}")
-    logging.info(f"📊 all_results in session: {len(jobs)} jobs")
-    logging.info(f"📊 Sample job: {jobs[0] if jobs else 'N/A'}")
-    
-    if not jobs:
-        return render_template("results.html", ranked_jobs=[])
-    
+    jobs = session.get('all_results', [])
     try:
         prompt = f"""
         You are an expert resume coach and ATS system analyst.
@@ -516,8 +411,7 @@ def rank_jobs():
             "location": "...",
             "relevance_score": X,
             "reason": "...",
-            "recommended_keywords": ["keyword1", "keyword2", "..."],
-            "source:" "..."
+            "recommended_keywords": ["keyword1", "keyword2", "..."]
           }},
           ...
         ]
@@ -530,27 +424,19 @@ def rank_jobs():
                 {"role": "user", "content": prompt}
             ]
         )
-        raw_output = response.choices[0].message.content
-        logging.info(f"🧠 Raw LLM Response:\n{raw_output}")
-        
-        ranked_jobs = robust_json_array_from_llm(raw_output)
-        logging.info(f"✅ Parsed {len(ranked_jobs)} ranked jobs")
-        session['ranked_jobs'] = ranked_jobs
-        return render_template("results.html", ranked_jobs=ranked_jobs)
+        cleaned_response = clean_json_string(response.choices[0].message.content)
+        ranked_jobs = json.loads(cleaned_response)
+        return render_template('results.html', ranked_jobs=ranked_jobs)
 
     except Exception as e:
         print(f"{Colors.RED}Error ranking jobs: {str(e)}{Colors.RESET}")
-        return render_template("results.html", ranked_jobs=[])
+        return []
 
 
 if __name__ == "__main__":
     app.run(debug=True)
     
     
-# /upload
-# /search
-# start_scraping
-# /results
     
 
 
